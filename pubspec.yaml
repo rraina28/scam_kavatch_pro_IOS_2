@@ -5,7 +5,7 @@ description: "Scam Kavatch Pro - AI-powered scam protection app that detects mal
 publish_to: 'none'
 
 # Production version
-version: 1.0.56+63
+version: 1.0.57+64
 
 environment:
   sdk: ^3.10.7
