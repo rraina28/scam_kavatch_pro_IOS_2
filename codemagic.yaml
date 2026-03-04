@@ -5,30 +5,18 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
-
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.cybrains.scamkavatchpro
+      groups:
+        - app_store_connect
 
     scripts:
-      - name: Flutter clean
-        script: flutter clean
-
-      - name: Get Flutter packages
+      - name: Get packages
         script: flutter pub get
 
-      - name: Build iOS IPA
-        script: |
-          flutter build ipa \
-            --release \
-            --build-name=1.0.57 \
-            --build-number=64
-
-    artifacts:
-      - build/ios/ipa/*.ipa
+      - name: Build IPA
+        script: flutter build ipa --release
 
     publishing:
-  app_store_connect:
-    api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-    key_id: $APP_STORE_CONNECT_KEY_ID
-    issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_ID
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
