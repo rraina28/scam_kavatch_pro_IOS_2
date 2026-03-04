@@ -25,11 +25,14 @@ dependencies:
   # State management
   provider: ^6.1.2
 
-  # ✅ AdMob monetization (Android + iOS)
+  # AdMob monetization
   google_mobile_ads: ^5.1.0
 
-  # Open URLs (cybercrime reporting, Play Store, etc.)
+  # Open URLs
   url_launcher: ^6.3.0
+
+  # HTTP API calls (Cloudflare scan API)
+  http: ^1.2.1
 
 
 dev_dependencies:
@@ -38,7 +41,7 @@ dev_dependencies:
 
   flutter_lints: ^2.0.0
 
-  # App icon generator (Android + iOS)
+  # App icon generator
   flutter_launcher_icons: ^0.13.1
 
 

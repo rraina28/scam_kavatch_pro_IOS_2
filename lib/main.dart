@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'services/api_service.dart';
+import 'services/premium_manager.dart';
+import 'services/ad_service.dart';   // ✅ REQUIRED
+import 'screens/premium_screen.dart';
 
 final GlobalKey<NavigatorState> navKey = GlobalKey<NavigatorState>();
 const MethodChannel testChannel = MethodChannel("test");
@@ -13,7 +20,12 @@ void main() {
   // Initialize AdMob (required for Android + iOS)
   MobileAds.instance.initialize();
 
-  runApp(const ScamKavatchApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => PremiumManager()..loadPremiumStatus(),
+      child: const ScamKavatchApp(),
+    ),
+  );
 
 }
 class ScamKavatchApp extends StatelessWidget {
@@ -281,7 +293,8 @@ class ScamProtectionDashboard extends StatefulWidget {
   @override
   State<ScamProtectionDashboard> createState() =>
       _ScamProtectionDashboardState();
-}
+
+ }
 
 class _ScamProtectionDashboardState extends State<ScamProtectionDashboard> {
   // ✅ Method Channel (MATCHES KOTLIN)
@@ -312,19 +325,29 @@ class _ScamProtectionDashboardState extends State<ScamProtectionDashboard> {
   final _scamDetector = _ScamDetector();
 
   @override
-  void initState() {
-    super.initState();
+void initState() {
+  super.initState();
 
-    // Listen for suspicious url from native
-    platform.setMethodCallHandler((call) async {
-      if (call.method == "onSuspiciousUrl" && _realTimeScanning) {
-        final String detectedUrl = call.arguments.toString();
-        _handleAutoDetection(detectedUrl);
-      }
-      return null;
+  /// ================= LOAD ADS (ONLY FOR FREE USERS) =================
+  final premium = context.read<PremiumManager>();
+
+  if (!premium.isPremium) {
+    AdService.loadBanner(() {
+      if (mounted) setState(() {});
     });
+
+    AdService.loadInterstitial();
   }
 
+  /// ================= NATIVE URL LISTENER =================
+  platform.setMethodCallHandler((call) async {
+    if (call.method == "onSuspiciousUrl" && _realTimeScanning) {
+      final String detectedUrl = call.arguments.toString();
+      _handleAutoDetection(detectedUrl);
+    }
+    return null;
+  });
+}
   @override
   void dispose() {
     _urlController.dispose();
@@ -339,16 +362,7 @@ class _ScamProtectionDashboardState extends State<ScamProtectionDashboard> {
     } catch (_) {}
   }
 
-  // ✅ test notification
-  Future<void> testNotification() async {
-    try {
-      await platform.invokeMethod('testNotification');
-      _showSnackBar('Test notification sent ✅ Check notification panel');
-    } catch (e) {
-      _showSnackBar('Notification failed: $e');
-    }
-  }
-
+  
   void _handleAutoDetection(String url) {
     final result = _scamDetector.analyzeUrl(url);
 
@@ -418,43 +432,87 @@ class _ScamProtectionDashboardState extends State<ScamProtectionDashboard> {
     }
   }
 
-  void _scanUrl() {
-    final url = _urlController.text.trim();
+Future<void> _scanUrl() async {
+  final url = _urlController.text.trim();
 
-    if (url.isEmpty) {
-      _showSnackBar('Please enter a URL to scan');
-      return;
-    }
-
-    final result = _scamDetector.analyzeUrl(url);
-
-    setState(() {
-      _currentDetection = result;
-
-      if (result['isSuspicious'] == true) {
-        _threatsBlocked++;
-        _recentDetections.insert(0, result);
-        if (_recentDetections.length > 10) {
-          _recentDetections.removeLast();
-        }
-      }
-    });
-
-    _showDetectionDialog(result);
-
-    if (result['isSuspicious'] != true) {
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          setState(() {
-            _currentDetection = null;
-            _urlController.clear();
-          });
-        }
-      });
-    }
+  if (url.isEmpty) {
+    _showSnackBar('Please enter a URL to scan');
+    return;
   }
 
-  void _analyzeClipboard() {
+  final premiumManager = context.read<PremiumManager>();
+
+  Map<String, dynamic> result;
+
+  // ================= FREE vs PREMIUM =================
+  if (!premiumManager.isPremium) {
+
+    // ===== FREE USER (NO API CALL) =====
+    result = _scamDetector.analyzeUrl(url);
+
+    if (result['isSuspicious'] == false) {
+      result['description'] =
+          "Domain appears safe. Upgrade to Premium for advanced verification of the website or seller.";
+    }
+
+  } else {
+
+    // ===== PREMIUM USER (AI API CHECK) =====
+    final verdict = await ApiService.scanUrl(url);
+
+    final isSuspicious =
+        verdict == "SCAM" || verdict == "SUSPICIOUS";
+
+    result = {
+      'url': url,
+      'isSuspicious': isSuspicious,
+      'threatType': verdict,
+      'severity': isSuspicious ? "High" : "Low",
+      'description': isSuspicious
+          ? "AI detected a suspicious website."
+          : "Domain verified safe using AI.",
+      'patternsFound': [],
+      'recommendation': isSuspicious
+          ? "Avoid entering personal information."
+          : "",
+    };
+  }
+
+  // ================= UPDATE UI =================
+  setState(() {
+    _currentDetection = result;
+
+    if (result['isSuspicious'] == true) {
+      _threatsBlocked++;
+      _recentDetections.insert(0, result);
+
+      if (_recentDetections.length > 10) {
+        _recentDetections.removeLast();
+      }
+    }
+  });
+
+  _showDetectionDialog(result);
+
+  // ================= ADS FOR FREE USERS =================
+  if (!premiumManager.isPremium) {
+    AdService.showInterstitial();
+  }
+
+  // ================= AUTO CLEAR SAFE RESULT =================
+  if (result['isSuspicious'] != true) {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _currentDetection = null;
+          _urlController.clear();
+        });
+      }
+    });
+  }
+}
+  
+void _analyzeClipboard() {
     final text = _clipboardController.text.trim();
 
     if (text.isEmpty) {
@@ -684,26 +742,37 @@ activity. Click here to verify: http://bank-verify-site.xyz/login
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSecurityStatusCard(),
-            const SizedBox(height: 20),
-            _buildUrlScanner(),
-            const SizedBox(height: 20),
-            _buildProtectionFeatures(),
-            const SizedBox(height: 20),
-            _buildClipboardAnalyzer(),
-            const SizedBox(height: 20),
-            _buildRecentDetections(),
-            const SizedBox(height: 20),
-            _buildQuickActions(),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
+  padding: const EdgeInsets.all(16),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildSecurityStatusCard(),
+
+      const SizedBox(height: 12),
+
+      _buildPremiumUpgradeButton(),   // ✅ ADD THIS
+
+      const SizedBox(height: 20),
+      _buildUrlScanner(),
+
+      const SizedBox(height: 20),
+      _buildProtectionFeatures(),
+
+      const SizedBox(height: 20),
+      _buildClipboardAnalyzer(),
+
+      const SizedBox(height: 20),
+      _buildRecentDetections(),
+
+      const SizedBox(height: 20),
+      _buildQuickActions(),
+
+      const SizedBox(height: 40),
+    ],
+  ),
+),
+      
+floatingActionButton: FloatingActionButton.extended(
         onPressed: _runFullScan,
         backgroundColor: Colors.red,
         foregroundColor: Colors.white,
@@ -1090,62 +1159,106 @@ activity. Click here to verify: http://bank-verify-site.xyz/login
   }
 
   Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'SECURITY TIPS & QUICK ACTIONS',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.red,
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'SECURITY TIPS & QUICK ACTIONS',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: Colors.red,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          ActionChip(
+            avatar: const Icon(Icons.auto_fix_high, color: Colors.white),
+            label: const Text('Scan Now'),
+            backgroundColor: Colors.red,
+            labelStyle: const TextStyle(color: Colors.white),
+            onPressed: _runFullScan,
           ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            ActionChip(
-              avatar: const Icon(Icons.auto_fix_high, color: Colors.white),
-              label: const Text('Scan Now'),
-              backgroundColor: Colors.red,
-              labelStyle: const TextStyle(color: Colors.white),
-              onPressed: _runFullScan,
-            ),
-            ActionChip(
-              avatar: const Icon(Icons.report, color: Colors.white),
-              label: const Text('Report Scam'),
+          ActionChip(
+            avatar: const Icon(Icons.report, color: Colors.white),
+            label: const Text('Report Scam'),
+            backgroundColor: Colors.orange,
+            labelStyle: const TextStyle(color: Colors.white),
+            onPressed: () => _showSnackBar('Scam reporting activated'),
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.update, color: Colors.white),
+            label: const Text('Update Database'),
+            backgroundColor: Colors.green,
+            labelStyle: const TextStyle(color: Colors.white),
+            onPressed: () => _showSnackBar('Threat database updated'),
+          ),
+          ActionChip(
+            avatar: const Icon(Icons.help, color: Colors.white),
+            label: const Text('Get Help'),
+            backgroundColor: Colors.blue,
+            labelStyle: const TextStyle(color: Colors.white),
+            onPressed: _showAdvisory,
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+Widget _buildPremiumUpgradeButton() {
+  return Card(
+    color: Colors.amber.shade50,
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.workspace_premium, color: Colors.orange),
+              SizedBox(width: 8),
+              Text(
+                "Upgrade to Scam Kavatch Premium",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          const Text("✔ AI Scam Detection"),
+          const Text("✔ Advanced Fraud Protection"),
+          const Text("✔ Ad-Free Experience"),
+
+          const SizedBox(height: 12),
+
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PremiumScreen(),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
-              labelStyle: const TextStyle(color: Colors.white),
-              onPressed: () => _showSnackBar('Scam reporting activated'),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 45),
             ),
-            ActionChip(
-              avatar: const Icon(Icons.update, color: Colors.white),
-              label: const Text('Update Database'),
-              backgroundColor: Colors.green,
-              labelStyle: const TextStyle(color: Colors.white),
-              onPressed: () => _showSnackBar('Threat database updated'),
-            ),
-            ActionChip(
-              avatar:
-                  const Icon(Icons.notifications_active, color: Colors.white),
-              label: const Text('Test Notification'),
-              backgroundColor: Colors.purple,
-              labelStyle: const TextStyle(color: Colors.white),
-              onPressed: testNotification,
-            ),
-            ActionChip(
-              avatar: const Icon(Icons.help, color: Colors.white),
-              label: const Text('Get Help'),
-              backgroundColor: Colors.blue,
-              labelStyle: const TextStyle(color: Colors.white),
-              onPressed: _showAdvisory,
-            ),
-          ],
-        ),
-      ],
-    );
+            child: const Text("Upgrade Now"),
+          ),
+        ],
+      ),
+    ),
+   );
   }
 }
 
@@ -1165,51 +1278,77 @@ class _ScamDetector {
     '.buzz',
   ];
 
-  Map<String, dynamic> analyzeUrl(String url) {
-    urlsAnalyzed++;
-    url = url.toLowerCase();
+  final List<String> phishingKeywords = [
+  'bank',
+  'login',
+  'offer',
+  'claim',
+  'upi',
+  'kyc',
+  'verify',
+  'secure',
+  'update',
+  'wallet'
+];
 
-    final patternsFound = <String>[];
-    bool isSuspicious = false;
-    String threatType = 'None';
-    String severity = 'Low';
+Map<String, dynamic> analyzeUrl(String url) {
+  urlsAnalyzed++;
+  url = url.toLowerCase();
 
-    for (final tld in suspiciousTlds) {
-      if (url.endsWith(tld) || url.contains('$tld/')) {
-        isSuspicious = true;
-        patternsFound.add('Suspicious TLD ($tld)');
-        threatType = 'Scam Domain';
-        severity = 'Medium';
+  final patternsFound = <String>[];
+  bool isSuspicious = false;
+  String threatType = 'Safe';
+  String severity = 'Low';
+
+  /// Detect suspicious TLD
+  for (final tld in suspiciousTlds) {
+    if (url.endsWith(tld) || url.contains('$tld/')) {
+      isSuspicious = true;
+      patternsFound.add('Suspicious domain extension ($tld)');
+      threatType = 'Suspicious Domain';
+      severity = 'Medium';
+    }
+  }
+
+    /// Detect phishing keywords
+    for (final word in phishingKeywords) {
+      if (url.contains(word)) {
+        patternsFound.add('Keyword pattern: $word');
       }
     }
 
-    if  (url.contains('bank') ||
-        url.contains('login') ||
-        url.contains('login') ||
-        url.contains('offer') ||
-        url.contains('claim') ||
-        url.contains('upi') ||
-        url.contains('kyc') ||
-        url.contains('verify') ||
-        url.contains('secure')) {
-      if (!url.startsWith('https://')) {
-        isSuspicious = true;
-        patternsFound.add('Unsecured Phishing Pattern');
-        threatType = 'Phishing';
-        severity = 'High';
-      }
+    /// If phishing keywords + no HTTPS → stronger suspicion
+    if (patternsFound.isNotEmpty && !url.startsWith('https://')) {
+      isSuspicious = true;
+      threatType = 'Phishing Pattern';
+      severity = 'High';
+      patternsFound.add('Unsecured HTTP connection');
     }
 
+    /// If still not suspicious
+    if (!isSuspicious) {
+      return {
+        'url': url,
+        'isSuspicious': false,
+        'threatType': 'Safe',
+        'severity': 'Low',
+        'description':
+            'Domain appears safe. Upgrade to Premium for advanced verification.',
+        'patternsFound': [],
+        'recommendation':
+            'For deeper verification of this website or seller reputation upgrade to Premium.',
+      };
+    }
+
+    /// Suspicious result
     return {
       'url': url,
-      'isSuspicious': isSuspicious,
+      'isSuspicious': true,
       'threatType': threatType,
       'severity': severity,
-      'description':
-          isSuspicious ? 'URL matches known scam patterns.' : 'URL looks safe.',
+      'description': 'This URL shows suspicious patterns.',
       'patternsFound': patternsFound,
-      'recommendation':
-          isSuspicious ? 'Do not enter any personal information.' : '',
+      'recommendation': 'Avoid entering personal or financial information.',
     };
   }
 
@@ -1218,8 +1357,8 @@ class _ScamDetector {
       return [
         {
           'threatType': 'Link Detected',
-          'severity': 'High',
-          'description': 'Suspicious URL found in clipboard',
+          'severity': 'Medium',
+          'description': 'A link was detected in clipboard. Verify before opening.',
         }
       ];
     }
@@ -1232,7 +1371,7 @@ class _ScamDetector {
         {
           'threatType': 'Phishing Email',
           'severity': 'High',
-          'description': 'Urgency and verification link found.',
+          'description': 'Urgent security language often used in phishing emails.',
         }
       ];
     }
@@ -1240,81 +1379,18 @@ class _ScamDetector {
   }
 
   List<String> getRecentScamPatterns() => [
-        'Unverified bank links',
-        'Fake support URLs',
+        'Fake bank verification pages',
         'OTP request scams',
-        'UPI collect request scams',
-        'Telegram investment scams',
+        'UPI payment request scams',
+        'Telegram investment fraud',
+        'Impersonation support pages',
       ];
 
   List<String> getSecurityTips() => [
-        'Always check the URL before clicking.',
+        'Always check the domain before clicking.',
         'Never share OTP with anyone.',
-        'Use two-factor authentication (2FA).',
-        'Avoid unknown APK downloads.',
-        'Verify bank calls using official numbers.',
+        'Enable two-factor authentication.',
+        'Avoid installing unknown APKs.',
+        'Verify calls claiming to be from banks or police.',
       ];
 }
-void showRedWarningPopup(String url, String reason) {
-  final ctx = navKey.currentContext;
-  if (ctx == null) return;
-
-  showDialog(
-    context: ctx,
-    barrierDismissible: true,
-    builder: (_) {
-      return AlertDialog(
-        backgroundColor: Colors.red.shade700,
-        title: const Text(
-          "⚠ Scam Kavatch Alert",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Suspicious URL detected!",
-                style: TextStyle(color: Colors.white)),
-            const SizedBox(height: 10),
-            Text("Reason: $reason", style: const TextStyle(color: Colors.white)),
-            const SizedBox(height: 10),
-            Text(url, style: const TextStyle(color: Colors.white)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Close", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-
-class AccessibilityBridge {
-  static const MethodChannel _channel =
-      MethodChannel('scam_kavatch/accessibility');
-
-  static void init() {
-    _channel.setMethodCallHandler((call) async {
-      if (call.method == "onUrlDetected") {
-        final String url = call.arguments?.toString() ?? "";
-        debugPrint("✅ URL detected from Android: $url");
-
-        // ✅ Use your existing scam rules (simple)
-        final detector = _ScamDetector();
-        final result = detector.analyzeUrl(url);
-
-        if (result['isSuspicious'] == true) {
-          showRedWarningPopup(
-            url,
-            "${result['threatType']} • ${result['severity']}",
-          );
-        }
-      }
-    });
-  }
-}
-

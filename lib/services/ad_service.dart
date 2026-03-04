@@ -19,30 +19,25 @@ class AdService {
       adUnitId: _bannerAdUnitId,
       size: AdSize.banner,
       request: const AdRequest(),
-
       listener: BannerAdListener(
 
         onAdLoaded: (Ad ad) {
           bannerReady = true;
-          debugPrint("AdService: Banner loaded");
+          debugPrint("Banner loaded");
           onLoaded();
         },
 
         onAdFailedToLoad: (Ad ad, LoadAdError error) {
           bannerReady = false;
-          debugPrint(
-            "AdService: Banner failed (${error.code}) ${error.message}",
-          );
+          debugPrint("Banner failed: ${error.message}");
           ad.dispose();
           bannerAd = null;
         },
-
       ),
     );
 
     bannerAd!.load();
   }
-
 
   static Widget getBannerWidget() {
 
@@ -57,102 +52,68 @@ class AdService {
     );
   }
 
-
   static void disposeBanner() {
     bannerAd?.dispose();
     bannerAd = null;
     bannerReady = false;
   }
 
-
-
   /// ================= INTERSTITIAL =================
 
   static InterstitialAd? interstitialAd;
 
   static const String _interstitialAdUnitId =
-      "ca-app-pub-8808893511254390/3742570628";
-
+      "ca-app-pub-8808893511254390/XXXXXXXXXX"; // Replace with your real ID
 
   static void loadInterstitial() {
-
-    if (interstitialAd != null) return;
 
     InterstitialAd.load(
       adUnitId: _interstitialAdUnitId,
       request: const AdRequest(),
-
       adLoadCallback: InterstitialAdLoadCallback(
 
         onAdLoaded: (InterstitialAd ad) {
-
-          debugPrint("AdService: Interstitial loaded");
+          debugPrint("Interstitial loaded");
 
           interstitialAd = ad;
-
-          interstitialAd!.setImmersiveMode(true);
 
           interstitialAd!.fullScreenContentCallback =
               FullScreenContentCallback(
 
             onAdDismissedFullScreenContent: (InterstitialAd ad) {
-
-              debugPrint("AdService: Interstitial dismissed");
-
               ad.dispose();
               interstitialAd = null;
 
+              // Preload next ad
               loadInterstitial();
             },
 
             onAdFailedToShowFullScreenContent:
                 (InterstitialAd ad, AdError error) {
 
-              debugPrint(
-                "AdService: Interstitial failed (${error.code}) ${error.message}",
-              );
-
+              debugPrint("Interstitial failed to show: ${error.message}");
               ad.dispose();
               interstitialAd = null;
             },
-
           );
         },
 
         onAdFailedToLoad: (LoadAdError error) {
-
-          debugPrint(
-            "AdService: Interstitial load failed (${error.code}) ${error.message}",
-          );
-
+          debugPrint("Interstitial failed to load: ${error.message}");
           interstitialAd = null;
         },
-
       ),
     );
   }
 
-
-
   static void showInterstitial() {
 
     if (interstitialAd != null) {
-
       interstitialAd!.show();
-
+      interstitialAd = null;
     } else {
-
-      debugPrint("AdService: Interstitial not ready");
-
+      debugPrint("Interstitial not ready");
     }
-  }
-
-
-
-  static void disposeInterstitial() {
-
-    interstitialAd?.dispose();
-    interstitialAd = null;
   }
 
 }

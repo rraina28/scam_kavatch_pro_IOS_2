@@ -2,24 +2,33 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.cybrains.scamkavatchpro">
 
-    <!-- REQUIRED for AdMob and Advertising ID (Android 13+) -->
+    <!-- AdMob Advertising ID -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
 
-    <!-- Required permissions -->
+    <!-- Internet -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Notifications -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Overlay -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+
+    <!-- Foreground service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+
+    <!-- Billing -->
     <uses-permission android:name="com.android.vending.BILLING"/>
 
-    <!-- Queries for browser detection -->
+    <!-- Browser detection -->
     <queries>
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <category android:name="android.intent.category.BROWSABLE"/>
             <data android:scheme="https"/>
         </intent>
+
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <category android:name="android.intent.category.BROWSABLE"/>
@@ -31,17 +40,22 @@
         android:name="${applicationName}"
         android:label="ScamKavatch PRO"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="false"
         android:allowBackup="true"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="false"
         tools:targetApi="35">
 
-        <!-- REQUIRED AdMob App ID -->
+        <!-- AdMob App ID -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-8808893511254390~5663628165"/>
 
-        <!-- Flutter Activity -->
+        <!-- Flutter embedding -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2"/>
+
+        <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -80,11 +94,6 @@
             android:name="com.cybrains.scamkavatchpro.ProtectionService"
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
-
-        <!-- Flutter embedding -->
-        <meta-data
-            android:name="flutterEmbedding"
-            android:value="2"/>
 
     </application>
 

@@ -31,9 +31,9 @@ android {
         targetSdk = 35
 
         // Increase versionCode after rejection
-        versionCode = 63
+        versionCode = 64
 
-        versionName = "1.0.56"
+        versionName = "1.0.57"
 
         multiDexEnabled = true
     }
