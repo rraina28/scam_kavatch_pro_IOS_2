@@ -28,6 +28,7 @@ workflows:
       - build/ios/ipa/*.ipa
 
     publishing:
-      app_store_connect:
-        apple_id: "r_raina27@yahoo.co.in"
-        password: $APP_SPECIFIC_PASSWORD
+  app_store_connect:
+    api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+    key_id: $APP_STORE_CONNECT_KEY_ID
+    issuer_id: $APP_STORE_CONNECT_ISSUER_ID
