@@ -19,6 +19,10 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
+
       - name: Build IPA
         script: flutter build ipa --release --export-method app-store
 
