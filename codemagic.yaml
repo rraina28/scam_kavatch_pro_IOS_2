@@ -31,4 +31,3 @@ workflows:
       app_store_connect:
         apple_id: "r_raina27@yahoo.co.in"
         password: $APP_SPECIFIC_PASSWORD
-        submit_to_testflight: true
