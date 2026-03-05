@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
 import 'services/premium_manager.dart';
 import 'services/ad_service.dart';   // ✅ REQUIRED
+import 'services/purchase_service.dart'; 
 import 'screens/premium_screen.dart';
 
 final GlobalKey<NavigatorState> navKey = GlobalKey<NavigatorState>();
@@ -19,13 +20,18 @@ void main() {
 
   // Initialize AdMob (required for Android + iOS)
   MobileAds.instance.initialize();
+final premiumManager = PremiumManager();
+premiumManager.loadPremiumStatus();
 
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => PremiumManager()..loadPremiumStatus(),
-      child: const ScamKavatchApp(),
-    ),
-  );
+final purchaseService = PurchaseService();
+purchaseService.restorePurchases();
+
+ runApp(
+  ChangeNotifierProvider(
+    create: (_) => premiumManager,
+    child: const ScamKavatchApp(),
+   ),
+ );
 
 }
 class ScamKavatchApp extends StatelessWidget {

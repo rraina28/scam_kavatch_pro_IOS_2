@@ -9,35 +9,51 @@ class PremiumManager extends ChangeNotifier {
 
   static const String _premiumKey = "is_premium_user";
 
+  SharedPreferences? _prefs;
+
+  /// Initialize manager and load premium status
+  Future<void> initialize() async {
+    _prefs = await SharedPreferences.getInstance();
+    await loadPremiumStatus();
+  }
+
   /// Load premium status when app starts
   Future<void> loadPremiumStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    _isPremium = prefs.getBool(_premiumKey) ?? false;
+    _prefs ??= await SharedPreferences.getInstance();
+
+    _isPremium = _prefs!.getBool(_premiumKey) ?? false;
+
     notifyListeners();
   }
 
-  /// Set premium status (used after successful purchase)
+  /// Set premium status after successful purchase
   Future<void> setPremium(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_premiumKey, value);
+    _prefs ??= await SharedPreferences.getInstance();
+
+    await _prefs!.setBool(_premiumKey, value);
 
     _isPremium = value;
+
     notifyListeners();
   }
 
-  /// Restore purchase later (Apple / Google billing)
+  /// Restore purchase status
   Future<void> restorePremium() async {
-    final prefs = await SharedPreferences.getInstance();
-    _isPremium = prefs.getBool(_premiumKey) ?? false;
+    _prefs ??= await SharedPreferences.getInstance();
+
+    _isPremium = _prefs!.getBool(_premiumKey) ?? false;
+
     notifyListeners();
   }
 
-  /// Reset premium (for testing or expiry)
+  /// Reset premium (useful for testing)
   Future<void> resetPremium() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_premiumKey);
+    _prefs ??= await SharedPreferences.getInstance();
+
+    await _prefs!.remove(_premiumKey);
 
     _isPremium = false;
+
     notifyListeners();
   }
 }
