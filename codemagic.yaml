@@ -4,7 +4,7 @@ workflows:
 
     environment:
       flutter: stable
-      xcode: 15.4
+      xcode: latest
 
       ios_signing:
         distribution_type: app_store
