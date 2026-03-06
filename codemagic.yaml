@@ -20,7 +20,7 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      - name: Build iOS
+      - name: Build iOS IPA
         script: flutter build ipa --release
 
     artifacts:
