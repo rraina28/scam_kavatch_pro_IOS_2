@@ -7,7 +7,7 @@ workflows:
       xcode: latest
 
       groups:
-        - app_store_connect   # <-- THIS LINE WAS MISSING
+        - app_store_connect
 
       ios_signing:
         distribution_type: app_store
@@ -20,7 +20,7 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      - name: Build iOS IPA
+      - name: Build IPA
         script: flutter build ipa --release
 
     artifacts:
