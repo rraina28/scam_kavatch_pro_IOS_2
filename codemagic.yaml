@@ -5,7 +5,6 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
-
       groups:
         - app_store_connect
 
@@ -20,11 +19,8 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      - name: Fetch signing files
-        script: xcode-project use-profiles
-
       - name: Build IPA
-        script: flutter build ipa --release
+        script: flutter build ipa --release --export-options-plist=ios/Runner/ExportOptions.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
