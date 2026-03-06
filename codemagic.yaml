@@ -6,6 +6,9 @@ workflows:
       flutter: stable
       xcode: latest
 
+      groups:
+        - app_store_connect   # <-- THIS LINE WAS MISSING
+
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.cybrains.scamkavatchpro
