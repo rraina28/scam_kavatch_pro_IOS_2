@@ -19,15 +19,21 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      - name: Set up code signing
+      - name: Install CocoaPods
         script: |
-          xcode-project use-profiles
+          cd ios
+          pod install
+          cd ..
+
+      - name: Set up code signing
+        script: xcode-project use-profiles
 
       - name: Build IPA
-        script: flutter build ipa --release --export-method app-store
+        script: flutter build ipa --release
 
     artifacts:
       - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
       - /tmp/xcodebuild_logs/*.log
 
     publishing:
