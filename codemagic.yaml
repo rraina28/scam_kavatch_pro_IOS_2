@@ -29,8 +29,7 @@ scripts:
         --create
 
   - name: Set up code signing
-    script: |
-      xcode-project use-profiles
+    script: xcode-project use-profiles
 
   - name: Build IPA
     script: |
@@ -48,3 +47,4 @@ publishing:
     key_id: $APP_STORE_API_KEY
     issuer_id: $APP_STORE_ISSUER_ID
     submit_to_testflight: true
+```
