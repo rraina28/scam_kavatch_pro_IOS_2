@@ -12,7 +12,6 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.cybrains.scamkavatchpro
-        team_id: XGQ4P3J43Z
 
     scripts:
       - name: Flutter clean
