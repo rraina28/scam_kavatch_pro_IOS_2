@@ -10,9 +10,6 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.cybrains.scamkavatchpro
 
-      groups:
-        - app_store_connect
-
     scripts:
       - name: Flutter clean
         script: flutter clean
@@ -28,4 +25,6 @@ workflows:
 
     publishing:
       app_store_connect:
-        auth: integration
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
