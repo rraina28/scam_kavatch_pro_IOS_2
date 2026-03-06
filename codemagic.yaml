@@ -12,6 +12,7 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.cybrains.scamkavatchpro
+        team_id: XGQ4P3J43Z
 
     scripts:
       - name: Flutter clean
@@ -20,18 +21,11 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      - name: Set up App Store Connect authentication
-        script: |
-          echo $APP_STORE_CONNECT_PRIVATE_KEY > private_key.p8
+      - name: Fetch signing files
+        script: xcode-project use-profiles
 
       - name: Build IPA
         script: flutter build ipa --release
 
     artifacts:
       - build/ios/ipa/*.ipa
-
-    publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
