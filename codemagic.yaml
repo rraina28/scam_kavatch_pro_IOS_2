@@ -2,7 +2,6 @@ workflows:
 ios-release:
 name: iOS Release Build
 
-```
 environment:
   flutter: stable
   xcode: latest
