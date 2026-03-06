@@ -2,6 +2,7 @@ workflows:
 ios-release:
 name: iOS Release Build
 
+```
 environment:
   flutter: stable
   xcode: latest
@@ -46,3 +47,4 @@ publishing:
     key_id: $APP_STORE_API_KEY
     issuer_id: $APP_STORE_ISSUER_ID
     submit_to_testflight: true
+```
