@@ -1,13 +1,14 @@
 workflows:
   ios-release:
     name: iOS Release Build
-
+    instance_type: mac_mini_m2 # Matches the machine in your screenshot
+    max_build_duration: 60
+    
     environment:
       flutter: stable
       xcode: latest
       groups:
         - app_store_connect
-
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.cybrains.scamkavatchpro
@@ -23,7 +24,9 @@ workflows:
         script: xcode-project use-profiles
 
       - name: Build IPA
-        script: flutter build ipa --release
+        # Adding --export-method ensures the .ipa is actually generated from the archive
+        script: flutter build ipa --release --export-method app-store
 
     artifacts:
+      # Using the wildcard ensures that any .ipa found in this directory is captured
       - build/ios/ipa/*.ipa
