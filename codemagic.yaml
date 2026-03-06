@@ -10,11 +10,6 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.cybrains.scamkavatchpro
 
-      vars:
-        APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
-        APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        APP_STORE_CONNECT_PRIVATE_KEY: $APP_STORE_CONNECT_PRIVATE_KEY
-
     scripts:
       - name: Flutter clean
         script: flutter clean
@@ -22,7 +17,7 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      - name: Build IPA
+      - name: Build iOS IPA
         script: flutter build ipa --release
 
     artifacts:
