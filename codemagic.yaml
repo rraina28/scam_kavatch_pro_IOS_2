@@ -13,6 +13,9 @@ workflows:
       groups:
         - app_store_connect
 
+      integrations:
+        app_store_connect: CodemagicKey
+
     scripts:
       - name: Flutter clean
         script: flutter clean
