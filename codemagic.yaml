@@ -12,6 +12,9 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.cybrains.scamkavatchpro
 
+      vars:
+        XCODE_PROJECT_TEAM_ID: XGQ4P3J43Z
+
       groups:
         - app_store_connect
 
