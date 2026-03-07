@@ -2,6 +2,9 @@ workflows:
   ios-release:
     name: iOS Release Build
 
+    integrations:
+      app_store_connect: CodemagicKey
+
     environment:
       flutter: stable
       xcode: 15.4
@@ -12,9 +15,6 @@ workflows:
 
       groups:
         - app_store_connect
-
-      integrations:
-        app_store_connect: CodemagicKey
 
     scripts:
       - name: Flutter clean
