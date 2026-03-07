@@ -16,14 +16,13 @@ workflows:
         bundle_identifier: com.cybrains.scamkavatchpro
 
     scripts:
-
       - name: Flutter clean
         script: flutter clean
 
       - name: Get packages
         script: flutter pub get
 
-      # ⭐ Fetch certificates + provisioning profile
+      # Fetch certificates and provisioning profile
       - name: Fetch signing files
         script: |
           keychain initialize
